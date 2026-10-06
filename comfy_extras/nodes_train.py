@@ -248,6 +248,9 @@ class TrainSampler(comfy.samplers.Sampler):
         absolute_indices = [bucket_offset + idx for idx in relative_indices]
 
         batch_latent = bucket_latent[relative_indices].to(latent_image)  # (actual_batch_size, C, H, W)
+        # bucket latents are held on the sampler and never pass through the
+        # process_latent_in applied to latent_image in inner_sample, so scale here
+        batch_latent = model_wrap.inner_model.process_latent_in(batch_latent)
         batch_noise = noisegen.generate_noise({"samples": batch_latent}).to(
             batch_latent.device
         )
@@ -298,6 +301,10 @@ class TrainSampler(comfy.samplers.Sampler):
         total_loss = 0
         for index in indicies:
             single_latent = self.real_dataset[index].to(latent_image)
+            # real_dataset latents are held on the sampler and never pass through
+            # the process_latent_in applied to latent_image in inner_sample, so
+            # scale here
+            single_latent = model_wrap.inner_model.process_latent_in(single_latent)
             batch_noise = noisegen.generate_noise(
                 {"samples": single_latent}
             ).to(single_latent.device)
